@@ -1,11 +1,136 @@
-# Configuration
 import pandas as pd
 from numpy import nan
-import os
 import datetime as dt
-import ndjson
-import requests
-import math
+from dicts import *
+
+
+def csvs_to_df(csvs=csvs, desired_col=assess_desired_col):
+    '''
+    Load csvs to pandas dataframe. Iterates over chunks to save memory use.
+    
+    :csvs: list with the path to the csvs files
+    :desired_col: columns we are interested in
+    '''
+    
+    df = pd.DataFrame()
+    
+    for csv in csvs:
+        
+        header = pd.read_csv(csv, nrows=0)
+        cols_intersect = list(set(header) & set(desired_col))
+        
+        iter_csv = pd.read_csv(csv, 
+                               iterator=True, 
+                               chunksize=100000,
+                               usecols=cols_intersect, 
+                               low_memory=False)
+        
+        # Filter only Completed Assessment
+        df0 = pd.concat([chunk[chunk['event'] == 'Complete Assessment'] for chunk in iter_csv])
+        
+        if len(df) == 0:
+            df = df0.copy()        
+        else:
+            df = df.append(df0)
+    return df
+
+
+def string_array_to_array(response_array, m=25):
+    '''
+    Convert string with response array into a list of responses. 
+    Convert new list elements (which are strings) into integers.
+    
+    :response_array: string with response array
+    :m: int with response array length (default to 25)
+    :returns: list with response array formated
+    '''
+    
+    if type(response_array) == float: # they are all NaN or none of them are
+        response_list = [nan]*m # there are 25 answers to 25 questions (m=25)
+    else:
+        response_list = response_array.split(',') # split by the commas      
+        response_list = [process_list_elem(elem) for elem in response_list]
+
+    return response_list
+
+
+def process_list_elem(elem):
+    '''
+    :elem: list element (string)
+    '''
+    
+    try:
+        new_elem = int(elem.replace("[","").replace("]","").replace("'",""))
+    except:
+        new_elem = elem.replace("[","").replace("]","").replace("'","")
+        
+    return new_elem
+
+
+def process_df(df):
+    '''
+    :df: pandas dataframe
+    '''
+    
+    df = df.drop('event', axis=1)
+    
+    df['timestamp'] = pd.to_datetime(df['time'])
+    df = df.drop('time', axis=1)
+    
+    df['question_scores'] = df['question_scores'].apply(lambda x: string_array_to_array(x))
+    df['question_labels'] = df['question_labels'].apply(lambda x: string_array_to_array(x)) 
+                                                      
+    df['category_scores'] = df['category_scores'].apply(lambda x: string_array_to_array(x, m=3))
+    df['categories'] = df['categories'].apply(lambda x: string_array_to_array(x, m=3))
+    
+
+    df[var_names] = pd.DataFrame(df['question_scores'].tolist(), index=df.index)
+    
+    
+    col_names = df.columns
+    
+    df = df.assign(phq_gad_score = df[['phq_gad_1', 'phq_gad_2']].mean(axis=1)*2)
+    df = df.assign(phq_dep_score = df[['phq_dep_1', 'phq_dep_2']].mean(axis=1)*2)
+    df = df.assign(phq_mood_score = df.phq_gad_score + df.phq_dep_score)
+    df = df.assign(wemwbs_score = df[col_names[14:28]].mean(axis=1)*14)
+    df = df.assign(wsas_score = df[col_names[29:34]].mean(axis=1)*5)
+    
+ 
+    df[scores] = pd.DataFrame(df['category_scores'].tolist(), index=df.index)
+    
+    df['gs_mood_score'] = reverse(df.gs_mood_score, 12)
+    df['gs_wsas_score'] = reverse(df.gs_wsas_score, 40)
+    df['phq_mood_score'] = reverse(df.phq_mood_score, 12)
+    df['phq_dep_score'] = reverse(df.phq_dep_score, 12)
+    df['phq_gad_score'] = reverse(df.phq_gad_score, 12)
+    df['wsas_score'] = reverse(df.wsas_score, 40)
+    
+    df.sort_values(by=['distinct_id','timestamp'], inplace=True, ascending=True) # sort by ID and date
+    
+    df.reset_index(drop=True, inplace=True)
+    
+    return df
+
+
+def reverse (series, const):
+    '''
+    :series: pandas dataframe column
+    :const: int
+    '''
+    return const - series
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # expects a list of lists, each list containing two dates to pass to API
 
@@ -73,55 +198,3 @@ def get_grouped_event(df, event_type, id_str, function=None, rename=None):
         df.rename(columns=rename, inplace=True)
 
     return df
-
-
-def string_array_to_array (response_array):
-    a = response_array.str.replace('"','').str.replace("'","") #remove quotes
-    a = a.str.replace(' ','')
-
-    b = a.str.slice(start=1,stop=-1) #remove the front and back brackets
-
-    c = b.str.split(',') #split by the commas
-
-    return c
-
-
-def vars_from_array_response (response_arrays, var_dict): # assigns each variable from the array of responses on each line
-    
-    for response_array in response_arrays: 
-        if type(response_array) == float: # they are all undefined or none of them are
-            for key in var_dict:
-                var_dict[key].append(nan)
-        else:
-            i = 0
-            for key in var_dict: # iterate through the item and assign; dict is in order
-                var_dict[key].append(response_array[i])
-                i +=1
-    return var_dict
-
-
-def dict_to_vars (df, var_dict, undefined=False):
-    
-    for key in var_dict: 
-#         print(len(var_dict[key]), len(df))
-        if key not in df.columns:
-            df[key] = var_dict[key]          
-    return df
-
-def reverse (series, const):
-    return const - series
-
-def assemble_df(csvs, desired_col):
-    df = pd.DataFrame()
-    for csv in csvs:
-        header = pd.read_csv(csv, nrows=0)
-        cols_intersect = list(set(header) & set(desired_col))
-        
-        if len(df) == 0:
-            df = pd.read_csv(csv, usecols=cols_intersect)
-            
-        else:
-            df = df.append(pd.read_csv(csv, usecols=cols_intersect))
-    return df
-   
-                
