@@ -14,7 +14,7 @@ desired_col = ['event', 'time', 'timestamp', 'distinct_id', 'browser', 'browser_
                'radio', 'region', 'organization', 'organization_name']  
 
 
-assess_desired_col = ['event', 'time', 'distinct_id', 'response_id', 'url_name', 'categories', 'category_scores',
+assess_desired_col = ['event', 'timestamp', 'distinct_id', 'response_id', 'url_name', 'categories', 'category_scores',
                       'question_labels', 'question_scores', 'total_score']
     
 
