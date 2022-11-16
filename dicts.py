@@ -18,7 +18,6 @@ assess_desired_col = ['event', 'timestamp', 'distinct_id', 'response_id', 'url_n
                       'question_labels', 'question_scores', 'total_score']
     
 
-
 var_names = ['phq_suicide', # Item  1    > suicidality
              'phq_gad_1', 'phq_gad_2', # Items 2:3  > gad2 anxiety
              'phq_dep_1', 'phq_dep_2', # Items 4:5  > phq2 depression
@@ -40,21 +39,21 @@ scores = ['gs_mood_score', 'gs_wemwbs_score', 'gs_wsas_score']
 cat_to_num_dict = { # for recoding to numbers
     
     # phq9 french
-    'Plus de sept jours':2, 
-    'Presque tous les jours':3, 
-    'Plus de la moitié des jours':2, 
-    'Plusieurs jours':1, 
+    'Presque tous les jours':3,
+    'Plus de la moitié des jours':2,
+    'Plus de sept jours':2,
+    'Plusieurs jours':1,
     'Jamais':0,
     
     # phq9 english
     'Nearly every day':3,
-    'More than half the days':2, 
-    'Several days':1, 
-    'Not at all':0, 
+    'More than half the days':2,
+    'Several days':1,
+    'Not at all':0,
     'undefined':nan,
     
     # retired question
-    'false':0, 
-    'true':1, 
+    'false':0,
+    'true':1,
     'undefined':nan
 }

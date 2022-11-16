@@ -26,7 +26,7 @@ def csvs_to_df(csvs=csvs, desired_col=desired_col):
         
         iter_csv = pd.read_csv(csv, 
                                iterator=True, 
-                               chunksize=100000,
+                               chunksize=10000,
                                usecols=cols_intersect, 
                                low_memory=False)
         
@@ -158,14 +158,16 @@ def get_df_assess(df, desired_col=assess_desired_col, new_cols=var_names, new_co
     df_assess = df_assess.assign(phq_dep_score = df_assess[['phq_dep_1', 'phq_dep_2']].mean(axis=1)*2)
     df_assess = df_assess.assign(phq_mood_score = df_assess.phq_gad_score + df_assess.phq_dep_score)
 
-    df_assess['phq_dep_score'] = reverse(df_assess.phq_dep_score, 12)
-    df_assess['phq_gad_score'] = reverse(df_assess.phq_gad_score, 12)
+    df_assess['phq_gad_score'] = reverse(df_assess.phq_gad_score, 6)
+    df_assess['phq_dep_score'] = reverse(df_assess.phq_dep_score, 6)
     df_assess['phq_mood_score'] = reverse(df_assess.phq_mood_score, 12)
+
     
-    col_names = df_assess.columns
+    wemwbs_col = var_names[5:19] # wemwbs columns
+    wsas_col = var_names[20:25] # wsas columns
     
-    df_assess = df_assess.assign(wemwbs_score = df_assess[col_names[14:28]].mean(axis=1)*14)
-    df_assess = df_assess.assign(wsas_score = df_assess[col_names[29:34]].mean(axis=1)*5)    
+    df_assess = df_assess.assign(wemwbs_score = df_assess[list(wemwbs_col)].mean(axis=1)*14)
+    df_assess = df_assess.assign(wsas_score = df_assess[list(wsas_col)].mean(axis=1)*5)    
     
     df_assess['wsas_score'] = reverse(df_assess.wsas_score, 40)
     
@@ -241,12 +243,14 @@ def get_first_last_assess(df_assess):
     # df_week = df_assess_first.groupby(df_assess_first.week_index).mean()
     
     df_assess_fl['total_time'] = (df_assess_fl.timestamp_last - df_assess_fl.timestamp_first).dt.days
+    
     df_assess_fl['dep_diff'] = (df_assess_fl.phq_dep_score_last - df_assess_fl.phq_dep_score_first)
     df_assess_fl['anx_diff'] = (df_assess_fl.phq_gad_score_last - df_assess_fl.phq_gad_score_first)
     df_assess_fl['mood_diff'] = (df_assess_fl.phq_mood_score_last - df_assess_fl.phq_mood_score_first)
     df_assess_fl['func_diff'] = (df_assess_fl.wsas_score_last - df_assess_fl.wsas_score_first)
     df_assess_fl['wb_diff'] = (df_assess_fl.wemwbs_score_last - df_assess_fl.wemwbs_score_first)
 
+    # The standard deviations
     dep_sd = df_assess_fl['dep_diff'].std()
     anx_sd = df_assess_fl['anx_diff'].std()
     mood_sd = df_assess_fl['mood_diff'].std()
