@@ -237,6 +237,8 @@ def get_first_last_assess(df_assess):
     
     df_assess_fl = df_assess_fl.rename(columns={'distinct_id_first': 'distinct_id'})
     df_assess_fl = df_assess_fl.drop('distinct_id_last', axis=1)
+    
+    print(df_assess_fl.columns)
 
     # add a week index
     # df_assess_first['week_index'] = ((df_assess_first.timestamp - dt.datetime(2021, 1, 1)).dt.days / 7).astype(int)
